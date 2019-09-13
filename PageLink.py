@@ -9,14 +9,15 @@ class PageLink:
   status = None
   depth = None
 
-  def __init__(self, url, internal, external, status, depth):
+  def __init__(self, url, depth):
     self.url = url
-    self.internal = internal
-    self.external = external
-    self.status = status
-    self.depth = depth
+    self.depth = int(depth)
 
-class DepthLink(NamedTuple):
-  ''' Basic structure with deptha and url'''
-  url: str
-  depth: int
+  def set_links(self, internal, external):
+    '''Set links'''
+    self.internal = list(internal)
+    self.external = list(external)
+
+  def set_status(self, status):
+    '''Set status'''
+    self.status = int(status)

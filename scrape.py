@@ -7,8 +7,6 @@ from PageLink import PageLink
 
 def crawl_page(page, depth, base_url):
   """Get individual page"""
-  # Echo page
-  print("Travelling to: ", page)
 
   # Set of next links
   internal = set()
@@ -44,10 +42,13 @@ def crawl_page(page, depth, base_url):
       else:
         internal.add(next_link)
 
-  return PageLink(page, list(internal), list(external), status, depth)
+  page_link = PageLink(page, depth)
+  page_link.set_links(internal, external)
+  page_link.set_status(status)
+  return page_link
 
 
-def crawl(base_url, max_depth):
+def crawl(base_url, max_depth, debug=False):
   """Entry point"""
 
   # Track visited, external and to be visited links
@@ -66,6 +67,8 @@ def crawl(base_url, max_depth):
     # Ensure we do not begin already visited site
     if url not in map(lambda v: v.url, visited):
       # Get links from current page
+      if debug:
+        print("[depth {0}]: {1}".format(depth, url))
       page_link = crawl_page(url, depth, base_url)
 
       # Add to visited
@@ -80,7 +83,9 @@ def crawl(base_url, max_depth):
 
 
 # Param check
-if len(sys.argv) < 3:
-  print("Please pass a site to crawl and a depth")
-else:
+if len(sys.argv) == 3:
   crawl(sys.argv[1], sys.argv[2])
+elif len(sys.argv) == 4:
+  crawl(sys.argv[1], sys.argv[2], sys.argv[3])
+else:
+  print("Please pass <url> <max depth> [show log]")
