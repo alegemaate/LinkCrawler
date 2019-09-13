@@ -3,6 +3,7 @@ Basic python link crawler that crawls websites up to a given depth
 
 ## Dependencies
 ```pip install requests```
+
 ```pip install beautifulSoup4```
 
 ## Running
