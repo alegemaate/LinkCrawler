@@ -1,9 +1,18 @@
 """Imports"""
 import sys
 import json
+import re
+import urllib.request
 import requests
 from bs4 import BeautifulSoup
 from PageLink import PageLink
+
+def check_content_type(page):
+  """Get page content type"""
+  with urllib.request.urlopen(page) as response:
+    info = response.info()
+    return info.get_content_type()
+
 
 def crawl_page(page, depth, base_url):
   """Get individual page"""
@@ -13,11 +22,16 @@ def crawl_page(page, depth, base_url):
   external = set()
 
   # Make request
-  response = requests.get(page)
-  status = response.status_code
+  try:
+    response = requests.get(page, stream=True)
+    content_type = response.headers.get('content-type')
+    status = response.status_code
+  except requests.exceptions.RequestException:
+    status = -1
+    content_type = ''
 
   # Only existing pages allowed
-  if status == 200:
+  if status == 200 and 'text/html' in content_type:
     # Get all a tags
     soup = BeautifulSoup(response.text, "html.parser")
 
@@ -31,18 +45,19 @@ def crawl_page(page, depth, base_url):
       next_link = current_tag['href']
 
       # Remove incorrect slashes and check domain
-      next_link = next_link.replace('\\', '/')
+      next_link = next_link.replace('\\', '/').replace('./', '/')
       if base_url not in next_link:
         # External link
         if '://' in next_link:
           external.add(next_link)
-        # Add base url to current
+        # Add base url to current, remove double slashes
         else:
-          internal.add(base_url + next_link)
+          full_link = base_url + '/' + next_link
+          internal.add(re.sub(r'(?<!:)\/\/', '/', full_link))
       else:
         internal.add(next_link)
 
-  page_link = PageLink(page, depth)
+  page_link = PageLink(page, depth, content_type)
   page_link.set_links(internal, external)
   page_link.set_status(status)
   return page_link
@@ -75,9 +90,10 @@ def crawl(base_url, max_depth, debug=False):
       visited.append(page_link)
 
       # Add to unvisited, only unvisited
-      unvisited_links = filter(lambda l: l not in map(lambda v: v.url, visited), page_link.internal)
-      for link in unvisited_links:
-        unvisited.add((link, depth + 1))
+      if page_link.internal:
+        unvisited_links = filter(lambda l: l not in map(lambda v: v.url, visited), page_link.internal)
+        for link in unvisited_links:
+          unvisited.add((link, depth + 1))
 
   print(json.dumps([ob.__dict__ for ob in visited]))
 
